@@ -223,7 +223,9 @@ describe('Carbon Question standalone HTML → .deck build', () => {
       && node.size?.y === 300);
     expect(image.parentIndex.guid).toEqual(mask.parentIndex.guid);
     expect(mask.parentIndex.position.localeCompare(image.parentIndex.position)).toBeLessThan(0);
-    expect(slide7Svg).toContain('mask-type:alpha');
+    // c021e0f moved the mask-type from a style attribute to a presentation
+    // attribute; the serialized form is `mask-type="alpha"`.
+    expect(slide7Svg).toContain('mask-type="alpha"');
     expect(slide7Svg).toContain('mask="url(#alpha-mask-');
   });
 });

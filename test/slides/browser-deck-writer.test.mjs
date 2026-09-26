@@ -58,7 +58,7 @@ const FIXTURE = join(
 // is where `putImage` and `canvasImageOps` live.
 const IMAGE_FIXTURE = join(
   REPO, 'test', 'fixtures', 'standalone-html',
-  'london-underground-map', 'london-underground-map.html',
+  'london-underground-map', 'London-Underground-Map.html',
 );
 // An <image> *inside* an inline SVG, which reaches the deck by a different
 // route from an <img>: its source is hashed out of the live realm and joined
