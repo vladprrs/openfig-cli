@@ -59,8 +59,11 @@ describe('public rasterizer API', () => {
     const svg = frameToSvg(fig, frame);
     expect(svg).not.toContain('#ff00ff');
     expect(svg).toContain('<linearGradient');
-    expect(svg).toContain('rgba(255,92,77,1.0000)');
-    expect(svg).toContain('rgba(130,64,240,1.0000)');
+    // One gradient across the boolean's own 40×40 box, masked by the operands' outlines.
+    expect(svg).toContain('gradientTransform="matrix(40,0,0,40,0,0)"');
+    expect(svg).toContain('stop-color="rgb(255,92,77)"');
+    expect(svg).toContain('stop-color="rgb(130,64,240)"');
+    expect(svg).toMatch(/<mask id="boolean-operands-\d+"/);
 
     const png = await svgToPng(svg, { background: '#fff', scale: 1 });
     expect(Buffer.from(png.subarray(1, 4)).toString('ascii')).toBe('PNG');
