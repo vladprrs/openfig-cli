@@ -5,6 +5,24 @@ All notable changes to `openfig-cli` are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **A supported `openfig-cli/rasterizer` package boundary for Figma Design frame export.** Consumers can import `frameToSvg` and `svgToPng` without reaching into `lib/rasterizer` internals.
+- **`frameToSvgWithReport`** returns the SVG and every source property it does not draw (`nodeId property=value`); options `crispClips` (clips without antialiasing, for a supersampling caller) and `pixelScale` (text baselines on the export's pixel grid). `patchFontFamily` is exported for callers that serve fonts under their own names.
+
+### Fixed
+
+- **Design-file paints on every geometry.** Gradients, images, angular and diamond gradients now paint vectors, ellipses, booleans, text and strokes, not only rectangles; radial gradients use the paint transform (they drew as circles of the default radius). Measured on 267 official exports of 24 real component families: states whose geometry matches Figma 126 → 210, states within 2% material pixel difference 108 → 210 (docs/rasterizer/paint-model.md).
+- **Strokes are Figma's outline, aligned by clipping** (`INSIDE`/`OUTSIDE` were drawn centred), with gradient and image stroke paints.
+- **`ODD` winding** was read as non-zero, filling every even-odd hole.
+- **Siblings stack by their fractional position** (and in reverse under auto layout's "first on top"), not by record order.
+- **Clip content applies inside components and to fill-less frames**, with corner radii; **alpha masks are alpha masks** (`mask-type` was ignored in `style`), `OUTLINE` and `LUMINANCE` masks are drawn as such.
+- **Drop shadows** knock out beneath the layer and honour spread; **inner shadows** and **layer blur** are drawn; effect filters live in the node's coordinates.
+- **Hidden nodes are not drawn; instances keep their own fills, strokes, radius and clip**; boolean operations draw their computed geometry only (the operands filled holes).
+- **Colour variables resolve by mode**, text truncation draws its ellipsis, corner radii shrink as Figma's do, rectangles and whole ellipses follow size and radius overrides.
+
 ## [0.6.0] - 2026-08-02
 
 ### Fixed
