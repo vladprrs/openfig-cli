@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import sharp from 'sharp';
-import { stateImagePaints } from '../../bin/commands/browser-images.mjs';
+import { stateImagePaints, assertImagePaintBinding } from '../../bin/commands/browser-images.mjs';
 import { PDFDocument, PDFName } from 'pdf-lib';
 import { nativeImageFromPdf, compactBrowserImageLeaves, imageDigest } from '../../lib/rasterizer/browser-image-assets.mjs';
 
@@ -20,6 +20,14 @@ const png = (width, height, background) => sharp({ create: { width, height, chan
 const svg = bytes => `<svg viewBox="-2 -1 34 34"><defs><clipPath id="c"><path d="M0 0h32v32H0Z"/></clipPath></defs><g clip-path="url(#c)" transform="translate(-2,-1)"><image width="2000" height="2000" transform="matrix(1,0,0,1,0,0)" href="data:image/png;base64,${bytes.toString('base64')}"/></g></svg>`;
 
 describe('native browser image leaves', () => {
+  it('rejects altered filter values, wrong original images and wrong file authority', () => {
+    const paint = { type: 'IMAGE', image: { hash: 'original' }, paintFilter: { shadows: -1, vibrance: 1, contrast: 0.11 } };
+    const record = { nodeId: 'leaf', fileKey: 'source', imageHash: 'original', paintFilter: { contrast: 0.11, vibrance: 1, shadows: -1 } };
+    expect(() => assertImagePaintBinding(paint, record, 'source')).not.toThrow();
+    expect(() => assertImagePaintBinding(paint, { ...record, paintFilter: { ...record.paintFilter, contrast: 0 } }, 'source')).toThrow('Wrong source paint binding');
+    expect(() => assertImagePaintBinding(paint, { ...record, imageHash: 'other' }, 'source')).toThrow('Wrong source paint binding');
+    expect(() => assertImagePaintBinding(paint, record, 'another-file')).toThrow('Wrong source paint binding');
+  });
   it('retains visible leaves and excludes descendants of hidden source groups', () => {
     const paint = { type: 'IMAGE', image: { hash: 'visible' } };
     const hiddenPaint = { type: 'IMAGE', image: { hash: 'hidden' } };

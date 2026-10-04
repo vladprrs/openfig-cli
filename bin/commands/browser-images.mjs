@@ -7,6 +7,10 @@ const canonical = value => JSON.stringify(Object.entries(value ?? {}).sort(([a],
 const key = paint => `${paint.image.hash}:${canonical(paint.paintFilter)}`;
 const adjusted = paint => Object.values(paint.paintFilter ?? {}).some(value => typeof value === 'number' && Math.abs(value) > 1e-6);
 
+export function assertImagePaintBinding(paint, record, fileKey) {
+  if (!paint || paint.type !== 'IMAGE' || record.fileKey !== fileKey || record.imageHash !== paint.image.hash || canonical(record.paintFilter) !== canonical(paint.paintFilter)) throw new Error(`Wrong source paint binding: ${record.nodeId}`);
+}
+
 /** A hidden ancestor hides its paints too, even when the leaf is individually visible. */
 export function stateImagePaints(nodes, stateId) {
   const byId = new Map(nodes.map(node => [node.nodeId, node]));
@@ -36,7 +40,7 @@ export async function run(args, flags) {
   for (const record of spec.adjustments) {
     const node = byId.get(record.nodeId);
     const paint = node?.raw.fillPaints?.[record.paintIndex];
-    if (!paint || paint.type !== 'IMAGE' || record.fileKey !== facts.fileKey || record.imageHash !== paint.image.hash || canonical(record.paintFilter) !== canonical(paint.paintFilter)) throw new Error(`Wrong source paint binding: ${record.nodeId}`);
+    assertImagePaintBinding(paint, record, facts.fileKey);
     const bytes = readFileSync(record.pdf);
     if (imageDigest(bytes) !== record.pdfSha256) throw new Error(`Changed official image export: ${record.nodeId}`);
     if (records.has(key(paint))) throw new Error('Duplicate adjusted image binding');
