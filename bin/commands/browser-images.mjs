@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 import { compactBrowserImageLeaves, imageDigest, nativeImageFromPdf } from '../../lib/rasterizer/browser-image-assets.mjs';
 
 const canonical = value => JSON.stringify(Object.entries(value ?? {}).sort(([a], [b]) => a.localeCompare(b)));
@@ -47,6 +48,7 @@ export async function run(args, flags) {
     records.set(key(paint), { record, width: paint.originalImageWidth, height: paint.originalImageHeight, bytes });
   }
   const prepared = [];
+  const intrinsicSizes = new Map();
   for (const state of spec.states) {
     const svg = readFileSync(state.svg, 'utf8');
     if (imageDigest(svg) !== state.svgSha256) throw new Error(`Changed retained native SVG: ${state.nodeId}`);
@@ -54,6 +56,13 @@ export async function run(args, flags) {
     const paints = stateImagePaints(facts.nodes, state.nodeId);
     const embedded = [...svg.matchAll(/data:image\/(?:png|jpeg|webp|gif);base64,([A-Za-z0-9+/=]+)/g)].map(match => Buffer.from(match[1], 'base64'));
     const hashes = new Map(embedded.map(bytes => [createHash('sha1').update(bytes).digest('hex'), imageDigest(bytes)]));
+    for (const bytes of embedded) {
+      const hash = createHash('sha1').update(bytes).digest('hex');
+      if (!intrinsicSizes.has(hash)) {
+        const metadata = await sharp(bytes).metadata();
+        intrinsicSizes.set(hash, { width: metadata.width, height: metadata.height });
+      }
+    }
     for (const hash of hashes.keys()) if (!paints.some(paint => paint.image.hash === hash)) throw new Error(`SVG image outside source paints: ${state.nodeId}`);
     for (const paint of paints) {
       if (!hashes.has(paint.image.hash)) throw new Error(`Source image omitted: ${state.nodeId}`);
@@ -68,7 +77,12 @@ export async function run(args, flags) {
   }
   // Resolve and validate every native leaf before writing any state output.
   const assets = new Map();
-  for (const [id, item] of records) assets.set(id, await nativeImageFromPdf(item.bytes, item));
+  for (const [id, item] of records) {
+    const intrinsic = intrinsicSizes.get(item.record.imageHash);
+    if (!intrinsic) throw new Error(`Adjusted source image was not used: ${item.record.nodeId}`);
+    try { assets.set(id, await nativeImageFromPdf(item.bytes, intrinsic)); }
+    catch (error) { throw new Error(`${item.record.nodeId}: ${error.message}`); }
+  }
   mkdirSync(flags.out, { recursive: true });
   const states = [];
   for (const item of prepared) {
