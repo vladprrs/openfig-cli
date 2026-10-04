@@ -109,3 +109,7 @@ MIT
 Figma is a trademark of Figma, Inc.
 
 OpenFig is an independent open-source project and is not affiliated with, endorsed by, or sponsored by Figma, Inc.
+
+### Native browser image derivatives
+
+`openfig browser-images SPEC.json --out DIRECTORY` compacts embedded image leaves of already-native SVG artwork. The source-bound specification contains `sourceFacts`, `sourceSha256`, `maxDimension`, `states` (`nodeId`, `svg`, `svgSha256`) and `adjustments` (`nodeId`, `paintIndex`, `imageHash`, exact `paintFilter`, `fileKey`, `pdf`, `pdfSha256`). Original image bytes must match the source SHA-1; geometry, masks, transforms and intrinsic SVG dimensions remain unchanged. Nonzero adjustments require an exact-leaf official PDF image stream with matching intrinsic dimensions. This uses the source engine rather than approximating its sliders with CSS filters. SVG exports alone omit native image adjustments. The output report retains source values and immutable derivative hashes. Keep original source inputs and exports private; only the permitted compact runtime derivatives belong in a published component. Animated images, ambiguous repeated paints and unsupported PDF encodings fail closed.

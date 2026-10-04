@@ -35,6 +35,7 @@ const COMMANDS = {
   'export':         './commands/export.mjs',
   'pdf':            './commands/pdf.mjs',
   'deck-to-fig':    './commands/deck-to-fig.mjs',
+  'browser-images': './commands/browser-images.mjs',
 };
 
 const arg2 = process.argv[2];
@@ -49,6 +50,7 @@ if (!arg2 || arg2 === '--help' || arg2 === '-h') {
   console.log('  deck-to-fig    Convert a Figma Slides .deck file into a Figma Design .fig file');
   console.log('  export         Export slides as images (PNG/JPG/WEBP)');
   console.log('  pdf            Export slides as a multi-page PDF');
+  console.log('  browser-images Compact native SVG image leaves from a source-bound build specification');
   console.log('  inspect        Show document structure (node hierarchy tree)');
   console.log('  list-text      List all text content in the deck');
   console.log('  list-overrides List editable override keys per symbol');
