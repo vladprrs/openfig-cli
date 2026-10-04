@@ -7,6 +7,24 @@ const canonical = value => JSON.stringify(Object.entries(value ?? {}).sort(([a],
 const key = paint => `${paint.image.hash}:${canonical(paint.paintFilter)}`;
 const adjusted = paint => Object.values(paint.paintFilter ?? {}).some(value => typeof value === 'number' && Math.abs(value) > 1e-6);
 
+/** A hidden ancestor hides its paints too, even when the leaf is individually visible. */
+export function stateImagePaints(nodes, stateId) {
+  const byId = new Map(nodes.map(node => [node.nodeId, node]));
+  const visible = node => {
+    const visited = new Set();
+    while (node) {
+      if (visited.has(node.nodeId)) throw new Error('Cyclic source ancestry');
+      visited.add(node.nodeId);
+      if (node.raw.visible === false || node.raw.phase === 'REMOVED') return false;
+      if (node.nodeId === stateId) return true;
+      node = byId.get(node.parentId);
+    }
+    throw new Error('Incomplete source ancestry');
+  };
+  return nodes.filter(node => node.state === stateId && visible(node))
+    .flatMap(node => (node.raw.fillPaints ?? []).filter(paint => paint.type === 'IMAGE' && paint.visible !== false));
+}
+
 /** Build already-native SVGs; no page rasterization and no approximate filter mapping. */
 export async function run(args, flags) {
   if (args.length !== 1 || !flags.out) throw new Error('Usage: openfig browser-images SPEC.json --out DIRECTORY');
@@ -29,8 +47,7 @@ export async function run(args, flags) {
     const svg = readFileSync(state.svg, 'utf8');
     if (imageDigest(svg) !== state.svgSha256) throw new Error(`Changed retained native SVG: ${state.nodeId}`);
     if (!byId.has(state.nodeId)) throw new Error(`State outside source closure: ${state.nodeId}`);
-    const paints = facts.nodes.filter(node => node.state === state.nodeId && node.raw.visible !== false)
-      .flatMap(node => (node.raw.fillPaints ?? []).filter(paint => paint.type === 'IMAGE' && paint.visible !== false));
+    const paints = stateImagePaints(facts.nodes, state.nodeId);
     const embedded = [...svg.matchAll(/data:image\/(?:png|jpeg|webp|gif);base64,([A-Za-z0-9+/=]+)/g)].map(match => Buffer.from(match[1], 'base64'));
     const hashes = new Map(embedded.map(bytes => [createHash('sha1').update(bytes).digest('hex'), imageDigest(bytes)]));
     for (const hash of hashes.keys()) if (!paints.some(paint => paint.image.hash === hash)) throw new Error(`SVG image outside source paints: ${state.nodeId}`);
