@@ -127,6 +127,17 @@ region       : packed(u32)  numLoops(u32)
 `packed` decodes as `windingRule = packed & 1` and `styleID = packed >> 1`; in
 every reference region `packed === 1`.
 
+### Region edges can run opposite to their stored direction
+
+Region loops order undirected segment indices. An edge can be traversed opposite
+to its stored start/end; follow vertex connectivity and swap the endpoint tangent
+vectors when reversing it. A retained source clock has an outer loop `[0,1,2,3]`
+and an inner loop `[7,6,5,4]`, although all eight stored edges point clockwise.
+Emitting their stored direction makes crossing curves inside the clock. Private
+retained-source replay verifies the correction; synthetic asymmetric tangents,
+mixed directions, scaling and disconnected-edge controls pin the adapter behavior.
+The original network bytes are unchanged.
+
 ### Curve-ness is in the tangents, not a type field
 
 The segment's leading `word0` is `0` on curved and straight segments alike —

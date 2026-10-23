@@ -131,4 +131,47 @@ describe('decodeVnb curve classification', () => {
     expect((d.match(/M/g) ?? []).length, 'one subpath per loop').toBe(2);
     expect((d.match(/C/g) ?? []).length, 'both segments curved').toBe(2);
   });
+
+  it('follows a reversed inner loop and swaps its endpoint tangents', () => {
+    const blob = buildVnb({
+      vertices: [[0, 0], [10, 0], [10, 10], [0, 10]],
+      segments: [
+        { sv: 0, tsx: 3, tsy: 1, ev: 1, tex: -2, tey: 2 },
+        { sv: 1, tsx: 1, tsy: 3, ev: 2, tex: 2, tey: -2 },
+        { sv: 2, tsx: -3, tsy: 1, ev: 3, tex: 2, tey: 2 },
+        { sv: 3, tsx: 1, tsy: -3, ev: 0, tex: 2, tey: 2 },
+      ],
+      regions: [[[0, 1, 2, 3], [3, 2, 1, 0]]],
+    });
+    expect(decodeVnb([{ bytes: blob }], 0, UNIT, { x: 2, y: 3 })).toBe(
+      'M0,0C6,3 16,6 20,0C22,9 24,24 20,30C14,33 4,36 0,30C2,21 4,6 0,0Z' +
+      'M0,0C4,6 2,21 0,30C4,36 14,33 20,30C24,24 22,9 20,0C16,6 6,3 0,0Z',
+    );
+  });
+
+  it('orients an individual backward edge without changing its neighbours', () => {
+    const blob = buildVnb({
+      vertices: [[0, 0], [10, 0], [10, 10], [0, 10]],
+      segments: [
+        { sv: 0, tsx: 0, tsy: 0, ev: 1, tex: 0, tey: 0 },
+        { sv: 2, tsx: 2, tsy: -3, ev: 1, tex: 1, tey: 4 },
+        { sv: 2, tsx: 0, tsy: 0, ev: 3, tex: 0, tey: 0 },
+        { sv: 3, tsx: 0, tsy: 0, ev: 0, tex: 0, tey: 0 },
+      ],
+      regions: [[[0, 1, 2, 3]]],
+    });
+    expect(decodeVnb([{ bytes: blob }], 0, UNIT, UNIT)).toBe('M0,0L10,0C11,4 12,7 10,10L0,10L0,0Z');
+  });
+
+  it('refuses disconnected region edges rather than inventing a joining curve', () => {
+    const blob = buildVnb({
+      vertices: [[0, 0], [10, 0], [20, 0], [30, 0]],
+      segments: [
+        { sv: 0, tsx: 1, tsy: 2, ev: 1, tex: 3, tey: 4 },
+        { sv: 2, tsx: 1, tsy: 2, ev: 3, tex: 3, tey: 4 },
+      ],
+      regions: [[[0, 1]]],
+    });
+    expect(decodeVnb([{ bytes: blob }], 0, UNIT, UNIT)).toBeNull();
+  });
 });
